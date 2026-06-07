@@ -4,10 +4,11 @@ import { fetchOverview } from "./api/client";
 import { APP_CODE, APP_NAME, APP_THEME } from "./constants/app";
 import { REQUEST_MESSAGES } from "./constants/messages";
 import { createFallbackOverview } from "./state/dashboard";
-import type { OverviewResponse } from "./types";
+import type { OverviewResponse, FeatureItem } from "./types";
 import { FeatureStrip } from "./components/FeatureStrip";
 import { MetricGrid } from "./components/MetricGrid";
 import { OperationsTable } from "./components/OperationsTable";
+import { LotteryWheel } from "./components/LotteryWheel";
 
 const theme = createTheme({
   palette: {
@@ -20,9 +21,12 @@ const theme = createTheme({
   typography: { fontFamily: '"Avenir Next", "Gill Sans", "Segoe UI", sans-serif' },
 });
 
+type Page = "home" | "lottery";
+
 export default function App() {
   const [overview, setOverview] = useState<OverviewResponse>(createFallbackOverview());
   const [notice, setNotice] = useState(REQUEST_MESSAGES.overviewFallback);
+  const [currentPage, setCurrentPage] = useState<Page>("home");
 
   useEffect(() => {
     fetchOverview()
@@ -33,31 +37,47 @@ export default function App() {
       .catch(() => setNotice(REQUEST_MESSAGES.overviewFallback));
   }, []);
 
+  const handleFeatureClick = (item: FeatureItem) => {
+    if (item.title.includes("抽奖")) {
+      setCurrentPage("lottery");
+    }
+  };
+
+  const handleBackToHome = () => {
+    setCurrentPage("home");
+  };
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <main className="app-shell">
         <header className="topbar">
-          <div className="brand-block">
+          <div className="brand-block" onClick={handleBackToHome} style={{ cursor: "pointer" }}>
             <span className="brand-code">{APP_CODE}</span>
             <h1 className="brand-title">{APP_NAME}</h1>
           </div>
           <Button variant="contained" href={REQUEST_MESSAGES.healthPath}>API Health</Button>
         </header>
         <section className="workspace">
-          <div className="lead-grid">
-            <Paper className="hero-panel" elevation={0}>
-              <Chip label={notice} sx={{ mb: 2 }} />
-              <Typography variant="h4" component="h2" gutterBottom>{overview.appName}</Typography>
-              <Typography>{overview.description}</Typography>
-            </Paper>
-            <MetricGrid items={overview.kpis} />
-          </div>
-          <FeatureStrip items={overview.features} />
-          <Box className="work-panel">
-            <Typography variant="h5" gutterBottom>运营任务流</Typography>
-            <OperationsTable records={overview.records} />
-          </Box>
+          {currentPage === "home" ? (
+            <>
+              <div className="lead-grid">
+                <Paper className="hero-panel" elevation={0}>
+                  <Chip label={notice} sx={{ mb: 2 }} />
+                  <Typography variant="h4" component="h2" gutterBottom>{overview.appName}</Typography>
+                  <Typography>{overview.description}</Typography>
+                </Paper>
+                <MetricGrid items={overview.kpis} />
+              </div>
+              <FeatureStrip items={overview.features} onFeatureClick={handleFeatureClick} />
+              <Box className="work-panel">
+                <Typography variant="h5" gutterBottom>运营任务流</Typography>
+                <OperationsTable records={overview.records} />
+              </Box>
+            </>
+          ) : (
+            <LotteryWheel onBack={handleBackToHome} />
+          )}
         </section>
       </main>
     </ThemeProvider>
